@@ -17,87 +17,93 @@ import com.ps.services.OperationsService;
  */
 public class SimpleOperationsService implements OperationsService {
 
-    private RequestRepo requestRepo;
-    private UserRepo userRepo;
-    private ResponseRepo responseRepo;
-    private ReviewRepo reviewRepo;
+  private RequestRepo requestRepo;
+  private UserRepo userRepo;
+  private ResponseRepo responseRepo;
+  private ReviewRepo reviewRepo;
 
-    @Override
-    public Response createResponse(Long sitterId, Long requestId) {
-        // get sitter
-        // TODO 1. retrieve sitter * request  (according to diagram 2.5)
+  @Override
+  public Response createResponse(Long sitterId, Long requestId) {
+    // get sitter
+    User user = userRepo.findById(sitterId);
+    Request request = requestRepo.findById(requestId);
 
-        //create a response
-        Response response = new Response();
-        //TODO 2. populate & save the response object
-        return response;
-    }
+    //create a response
+    Response response = new Response();
+    response.setResponseStatus(ResponseStatus.PROPOSED);
+    response.setUser(user);
+    response.setDetails("Some details here");
+    request.addResponse(response);
 
+    responseRepo.save(response);
 
-    @Override
-    public void acceptResponse(Long requestId, Long responseId) {
-        Request request = requestRepo.findById(requestId);
-        Response response = responseRepo.findById(responseId);
-
-        request.getResponses().forEach(r -> {
-            if (r.equals(response)) {
-                r.setResponseStatus(ResponseStatus.ACCEPTED);
-            } else {
-                r.setResponseStatus(ResponseStatus.REJECTED);
-            }
-            responseRepo.save(r);
-        });
-    }
-
-    @Override
-    public User closeRequest(Long requestId, Long reviewId) {
-        Request request = requestRepo.findById(requestId);
-        Review review = reviewRepo.findById(reviewId);
-        request.setRequestStatus(RequestStatus.SOLVED);
-        requestRepo.save(request);
+    return response;
+  }
 
 
-        for (Response r : request.getResponses()) {
-            if (r.getResponseStatus() == ResponseStatus.ACCEPTED) {
-                review.setResponse(r);
-                User sitter = r.getUser();
-                // compute new rating for user
-                double newRating = (sitter.getRating() + review.getGrade().getGrade()) / 2;
-                sitter.setRating(newRating);
-                userRepo.save(sitter);
-                return sitter;
-            }
-        }
-        return null;
-    }
+  @Override
+  public void acceptResponse(Long requestId, Long responseId) {
+    Request request = requestRepo.findById(requestId);
+    Response response = responseRepo.findById(responseId);
 
-    @Override
-    public User rateOwner(Long requestId, Long reviewId) {
-        Request request = requestRepo.findById(requestId);
-        Review review = reviewRepo.findById(reviewId);
-        User owner = request.getUser();
-        review.setRequest(request);
+    request.getResponses().forEach(r -> {
+      if (r.equals(response)) {
+        r.setResponseStatus(ResponseStatus.ACCEPTED);
+      } else {
+        r.setResponseStatus(ResponseStatus.REJECTED);
+      }
+      responseRepo.save(r);
+    });
+  }
+
+  @Override
+  public User closeRequest(Long requestId, Long reviewId) {
+    Request request = requestRepo.findById(requestId);
+    Review review = reviewRepo.findById(reviewId);
+    request.setRequestStatus(RequestStatus.SOLVED);
+    requestRepo.save(request);
+
+    for (Response r : request.getResponses()) {
+      if (r.getResponseStatus() == ResponseStatus.ACCEPTED) {
+        review.setResponse(r);
+        User sitter = r.getUser();
         // compute new rating for user
-        double newRating = (owner.getRating() + review.getGrade().getGrade()) / 2;
-        owner.setRating(newRating);
-        userRepo.save(owner);
-        return owner;
+        double newRating = (sitter.getRating() + review.getGrade().getGrade()) / 2;
+        sitter.setRating(newRating);
+        userRepo.save(sitter);
+        return sitter;
+      }
     }
+    return null;
+  }
 
-    //                setters & getters
-    public void setRequestRepo(RequestRepo requestRepo) {
-        this.requestRepo = requestRepo;
-    }
+  @Override
+  public User rateOwner(Long requestId, Long reviewId) {
+    Request request = requestRepo.findById(requestId);
+    Review review = reviewRepo.findById(reviewId);
+    User owner = request.getUser();
+    review.setRequest(request);
+    // compute new rating for user
+    double newRating = (owner.getRating() + review.getGrade().getGrade()) / 2;
+    owner.setRating(newRating);
+    userRepo.save(owner);
+    return owner;
+  }
 
-    public void setUserRepo(UserRepo userRepo) {
-        this.userRepo = userRepo;
-    }
+  //                setters & getters
+  public void setRequestRepo(RequestRepo requestRepo) {
+    this.requestRepo = requestRepo;
+  }
 
-    public void setResponseRepo(ResponseRepo responseRepo) {
-        this.responseRepo = responseRepo;
-    }
+  public void setUserRepo(UserRepo userRepo) {
+    this.userRepo = userRepo;
+  }
 
-    public void setReviewRepo(ReviewRepo reviewRepo) {
-        this.reviewRepo = reviewRepo;
-    }
+  public void setResponseRepo(ResponseRepo responseRepo) {
+    this.responseRepo = responseRepo;
+  }
+
+  public void setReviewRepo(ReviewRepo reviewRepo) {
+    this.reviewRepo = reviewRepo;
+  }
 }
